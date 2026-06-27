@@ -1,12 +1,12 @@
-# Prefix Wallet Gen
+# Solana Prefix Wallet Gen
 
-Solana-Wallet-Generator mit **BIP-39 Prefix-Wörtern** — die Seed Phrase beginnt mit deinen gewünschten Wörtern.
+**Nur Solana** — Wallet-Generator mit BIP-39 Prefix-Wörtern. Die Seed Phrase beginnt mit deinen gewünschten Wörtern.
 
 ## Features
 
 - Prefix-Wörter am Anfang der Mnemonic (12 oder 24 Wörter)
-- Standard Solana HD (`m/44'/501'/0'/0'`) oder Direct/Cohort-Style
-- Optionales Vanity-Adress-Prefix
+- Standard Solana HD-Derivation (`m/44'/501'/0'/0'`) — Phantom, Solflare, Backpack
+- Optionales Vanity-Adress-Prefix für Solana-Adressen
 - Einfaches Web-Dashboard
 
 ## Lokal starten

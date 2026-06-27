@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prefix Wallet Gen — Solana</title>
+  <title>Solana Prefix Wallet Gen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -292,8 +292,8 @@
       <div class="logo">
         <div class="logo-icon">◎</div>
         <div>
-          <h1>Prefix Wallet Gen</h1>
-          <p class="subtitle">Solana-Wallets mit BIP-39 Seed-Phrase — deine Wörter stehen am Anfang.</p>
+          <h1>Solana Prefix Wallet Gen</h1>
+          <p class="subtitle">Nur Solana — BIP-39 Seed Phrase mit deinen Wörtern am Anfang. Kompatibel mit Phantom, Solflare &amp; Backpack.</p>
         </div>
       </div>
     </header>
@@ -311,29 +311,20 @@
           <textarea id="prefix" placeholder="z.B. abandon ability able"></textarea>
           <div class="difficulty" id="difficulty"></div>
         </div>
-        <div class="row">
-          <div class="field">
-            <label for="wordCount">Wortanzahl</label>
-            <select id="wordCount">
-              <option value="12" selected>12 Wörter</option>
-              <option value="24">24 Wörter</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="scheme">Derivation</label>
-            <select id="scheme">
-              <option value="standard" selected>Standard (Phantom)</option>
-              <option value="direct">Direct (Cohort-Style)</option>
-            </select>
-          </div>
+        <div class="field">
+          <label for="wordCount">Seed-Phrase Länge</label>
+          <select id="wordCount">
+            <option value="12" selected>12 Wörter</option>
+            <option value="24">24 Wörter</option>
+          </select>
         </div>
       </div>
 
       <div class="card">
         <h2>Optionen</h2>
         <div class="field">
-          <label for="addressPrefix">Adress-Prefix (optional, z.B. „7xK")</label>
-          <input id="addressPrefix" type="text" placeholder="Leer lassen = beliebige Adresse" />
+          <label for="addressPrefix">Solana-Adress-Prefix (optional, z.B. „7xK")</label>
+          <input id="addressPrefix" type="text" placeholder="Leer lassen = beliebige Solana-Adresse" />
         </div>
         <div class="row">
           <div class="field">
@@ -349,8 +340,8 @@
     </div>
 
     <div class="actions">
-      <button class="btn-primary" id="generateBtn">Wallet generieren</button>
-      <button class="btn-secondary" id="randomBtn">Zufällige Wallet</button>
+      <button class="btn-primary" id="generateBtn">Solana Wallet generieren</button>
+      <button class="btn-secondary" id="randomBtn">Zufällige Solana Wallet</button>
     </div>
 
     <div class="status-line" id="status"></div>
@@ -384,7 +375,6 @@
       return {
         prefix: prefixEl.value,
         wordCount: parseInt(wordCountEl.value, 10),
-        scheme: $('scheme').value,
         account: parseInt($('account').value, 10) || 0,
         addressPrefix: $('addressPrefix').value,
         maxAttempts: parseInt($('maxAttempts').value, 10) || 2000000,
@@ -460,10 +450,10 @@
           </div>
         ` : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Private Key ausgeblendet.</p>'}
         <div class="meta">
+          <span>Chain: <strong>Solana</strong></span>
+          <span>Pfad: <strong>${data.derivationPath || "m/44'/501'/0'/0'"}</strong></span>
           <span>Versuche: <strong>${(data.attempts || 1).toLocaleString()}</strong></span>
-          <span>Schema: <strong>${data.scheme}</strong></span>
           <span>Account: <strong>${data.account}</strong></span>
-          <span>Methode: <strong>${data.method || '—'}</strong></span>
         </div>
       `;
     }

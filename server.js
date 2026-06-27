@@ -17,7 +17,7 @@ const jobs = new Map();
 let jobCounter = 0;
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'prefix-wallet-gen' });
+  res.json({ ok: true, service: 'prefix-wallet-gen', chain: 'solana' });
 });
 
 app.post('/api/estimate', (req, res) => {
@@ -45,7 +45,6 @@ app.post('/api/estimate', (req, res) => {
 app.post('/api/generate', (req, res) => {
   try {
     const wordCount = parseInt(req.body.wordCount, 10) === 24 ? 24 : 12;
-    const scheme = req.body.scheme === 'direct' ? 'direct' : 'standard';
     const account = Math.max(0, parseInt(req.body.account, 10) || 0);
     const maxAttempts = Math.min(50_000_000, Math.max(1000, parseInt(req.body.maxAttempts, 10) || 2_000_000));
     const prefixWords = parsePrefixWords(req.body.prefix || '');
@@ -61,7 +60,6 @@ app.post('/api/generate', (req, res) => {
         const result = generateWallet({
           prefix: req.body.prefix || '',
           wordCount,
-          scheme,
           account,
           addressPrefix: req.body.addressPrefix || '',
           maxAttempts,
@@ -74,12 +72,13 @@ app.post('/api/generate', (req, res) => {
         jobs.set(jobId, {
           status: 'done',
           result: {
+            chain: 'solana',
             mnemonic: result.mnemonic,
             address: result.address,
             secretKeyBase58: result.secretKeyBase58,
             attempts: result.attempts,
             method: result.method,
-            scheme: result.scheme,
+            derivationPath: result.derivationPath,
             account: result.account,
             wordCount: result.wordCount,
             prefixWords: result.prefixWords,
@@ -111,26 +110,25 @@ app.get('/api/job/:id', (req, res) => {
 app.post('/api/generate-sync', (req, res) => {
   try {
     const wordCount = parseInt(req.body.wordCount, 10) === 24 ? 24 : 12;
-    const scheme = req.body.scheme === 'direct' ? 'direct' : 'standard';
     const account = Math.max(0, parseInt(req.body.account, 10) || 0);
     const maxAttempts = Math.min(500_000, Math.max(1000, parseInt(req.body.maxAttempts, 10) || 100_000));
 
     const result = generateWallet({
       prefix: req.body.prefix || '',
       wordCount,
-      scheme,
       account,
       addressPrefix: req.body.addressPrefix || '',
       maxAttempts,
     });
 
     res.json({
+      chain: 'solana',
       mnemonic: result.mnemonic,
       address: result.address,
       secretKeyBase58: result.secretKeyBase58,
       attempts: result.attempts,
       method: result.method,
-      scheme: result.scheme,
+      derivationPath: result.derivationPath,
       account: result.account,
       wordCount: result.wordCount,
       prefixWords: result.prefixWords,

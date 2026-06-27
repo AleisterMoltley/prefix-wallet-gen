@@ -1,7 +1,7 @@
 {
   "name": "prefix-wallet-gen",
   "version": "1.0.0",
-  "description": "Solana wallet generator with custom BIP-39 prefix words",
+  "description": "Solana-only wallet generator with custom BIP-39 prefix words",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
