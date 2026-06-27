@@ -18,6 +18,10 @@ npm start
 
 Öffne http://localhost:3000
 
+## Live Demo
+
+https://prefix-wallet-gen-production.up.railway.app
+
 ## Railway Deploy
 
 1. Repo mit GitHub verbinden
