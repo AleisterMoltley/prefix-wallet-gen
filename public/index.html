@@ -293,7 +293,7 @@
         <div class="logo-icon">◎</div>
         <div>
           <h1>Solana Prefix Wallet Gen</h1>
-          <p class="subtitle">Nur Solana — BIP-39 Seed Phrase mit deinen Wörtern am Anfang. Kompatibel mit Phantom, Solflare &amp; Backpack.</p>
+          <p class="subtitle">Nur Solana — BIP-39 Prefix-Wörter + schneller Vanity-Grinder (Rust, parallel). Phantom, Solflare &amp; Backpack.</p>
         </div>
       </div>
     </header>
@@ -323,9 +323,14 @@
       <div class="card">
         <h2>Optionen</h2>
         <div class="field">
-          <label for="addressPrefix">Solana-Adress-Prefix (optional, z.B. „7xK")</label>
-          <input id="addressPrefix" type="text" placeholder="Leer lassen = beliebige Solana-Adresse" />
+          <label for="addressPrefix">Adresse beginnt mit (optional)</label>
+          <input id="addressPrefix" type="text" placeholder="z.B. 7xK" />
         </div>
+        <div class="field">
+          <label for="addressSuffix">Adresse endet mit (optional, am schnellsten)</label>
+          <input id="addressSuffix" type="text" placeholder="z.B. pump" />
+        </div>
+        <p class="difficulty" id="engineInfo"></p>
         <div class="row">
           <div class="field">
             <label for="account">Account-Index</label>
@@ -377,6 +382,7 @@
         wordCount: parseInt(wordCountEl.value, 10),
         account: parseInt($('account').value, 10) || 0,
         addressPrefix: $('addressPrefix').value,
+        addressSuffix: $('addressSuffix').value,
         maxAttempts: parseInt($('maxAttempts').value, 10) || 2000000,
       };
     }
@@ -395,12 +401,12 @@
           return;
         }
         difficultyEl.style.color = '';
-        let text = `Schwierigkeit: <strong>${data.difficulty.label}</strong>`;
-        if (data.difficulty.factor > 1) {
-          text += ` (~${data.difficulty.factor.toLocaleString()}×)`;
+        let text = `Mnemonic: <strong>${data.difficulty.mnemonic.label}</strong>`;
+        if (data.difficulty.address) {
+          text += ` · Adresse: <strong>${data.difficulty.address.label}</strong>`;
         }
-        if (data.addressNote) text += ` · ${data.addressNote}`;
         difficultyEl.innerHTML = text;
+        $('engineInfo').innerHTML = `Engine: <strong>${data.grinder === 'rust' ? 'Rust-Grinder ⚡' : 'Node Workers ×' + data.threads}</strong>`;
       } catch {
         difficultyEl.textContent = '';
       }
@@ -414,6 +420,7 @@
     prefixEl.addEventListener('input', scheduleEstimate);
     wordCountEl.addEventListener('change', scheduleEstimate);
     $('addressPrefix').addEventListener('input', scheduleEstimate);
+    $('addressSuffix').addEventListener('input', scheduleEstimate);
     updateEstimate();
 
     function copyText(text, btn) {
@@ -434,11 +441,15 @@
 
       const showSecret = confirm('Private Key anzeigen? Nur ja klicken wenn niemand mitliest!');
 
-      resultContent.innerHTML = `
+      const mnemonicBlock = data.mnemonic ? `
         <div class="result-label">Mnemonic (Seed Phrase)</div>
         <div class="result-value" id="mnemonicVal">${data.mnemonic}
           <button class="copy-btn" onclick="copyFrom('mnemonicVal')">Copy</button>
         </div>
+      ` : `<p style="color:var(--warn);font-size:0.9rem;margin-bottom:1rem">${data.note || 'Vanity-Wallet ohne Mnemonic — importiere den Private Key direkt.'}</p>`;
+
+      resultContent.innerHTML = `
+        ${mnemonicBlock}
         <div class="result-label">Solana Adresse</div>
         <div class="result-value" id="addressVal">${data.address}
           <button class="copy-btn" onclick="copyFrom('addressVal')">Copy</button>
@@ -451,9 +462,11 @@
         ` : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Private Key ausgeblendet.</p>'}
         <div class="meta">
           <span>Chain: <strong>Solana</strong></span>
-          <span>Pfad: <strong>${data.derivationPath || "m/44'/501'/0'/0'"}</strong></span>
-          <span>Versuche: <strong>${(data.attempts || 1).toLocaleString()}</strong></span>
-          <span>Account: <strong>${data.account}</strong></span>
+          <span>Engine: <strong>${data.engine || '—'}</strong></span>
+          ${data.derivationPath ? `<span>Pfad: <strong>${data.derivationPath}</strong></span>` : ''}
+          <span>Versuche: <strong>${data.attempts != null ? data.attempts.toLocaleString() : '—'}</strong></span>
+          ${data.elapsedMs ? `<span>Zeit: <strong>${(data.elapsedMs / 1000).toFixed(2)}s</strong></span>` : ''}
+          ${data.keysPerSec ? `<span>Speed: <strong>${data.keysPerSec.toLocaleString()}/s</strong></span>` : ''}
         </div>
       `;
     }
@@ -470,7 +483,8 @@
         const data = await res.json();
 
         if (data.status === 'running') {
-          statusEl.innerHTML = `<span class="spinner"></span>Suche… ${(data.attempts || 0).toLocaleString()} Versuche`;
+          const speed = data.keysPerSec ? ` · ${data.keysPerSec.toLocaleString()}/s` : '';
+          statusEl.innerHTML = `<span class="spinner"></span>Suche… ${(data.attempts || 0).toLocaleString()} Versuche${speed}`;
           await new Promise((r) => setTimeout(r, 400));
           continue;
         }
@@ -497,8 +511,8 @@
       if (clearPrefix) payload.prefix = '';
 
       try {
-        const hasAddressPrefix = payload.addressPrefix.trim().length > 0;
-        const useAsync = hasAddressPrefix || payload.maxAttempts > 500000;
+        const hasAddressFilter = payload.addressPrefix.trim().length > 0 || payload.addressSuffix.trim().length > 0;
+        const useAsync = hasAddressFilter || payload.maxAttempts > 500000;
 
         if (!useAsync) {
           const res = await fetch('/api/generate-sync', {

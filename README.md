@@ -6,7 +6,8 @@
 
 - Prefix-Wörter am Anfang der Mnemonic (12 oder 24 Wörter)
 - Standard Solana HD-Derivation (`m/44'/501'/0'/0'`) — Phantom, Solflare, Backpack
-- Optionales Vanity-Adress-Prefix für Solana-Adressen
+- **Schneller Vanity-Grinder** (Rust, aus [FreeSolDev/vanity](https://github.com/FreeSolDev/vanity)) für Adress-Prefix/Suffix
+- Node.js Worker-Fallback mit `@noble/ed25519` + parallelen Threads
 - Einfaches Web-Dashboard
 
 ## Lokal starten

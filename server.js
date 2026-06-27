@@ -5,10 +5,13 @@ const {
   estimateDifficulty,
   parsePrefixWords,
   validatePrefixWords,
+  isGrinderAvailable,
+  defaultThreads,
 } = require('./lib/wallet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const TIMEOUT_MS = parseInt(process.env.TIMEOUT_MS, 10) || 300_000;
 
 app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -17,7 +20,13 @@ const jobs = new Map();
 let jobCounter = 0;
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'prefix-wallet-gen', chain: 'solana' });
+  res.json({
+    ok: true,
+    service: 'prefix-wallet-gen',
+    chain: 'solana',
+    grinder: isGrinderAvailable() ? 'rust' : 'node-workers',
+    threads: defaultThreads(),
+  });
 });
 
 app.post('/api/estimate', (req, res) => {
@@ -25,22 +34,47 @@ app.post('/api/estimate', (req, res) => {
     const wordCount = parseInt(req.body.wordCount, 10) === 24 ? 24 : 12;
     const prefixWords = parsePrefixWords(req.body.prefix || '');
     validatePrefixWords(prefixWords, wordCount);
-    const difficulty = estimateDifficulty(prefixWords, wordCount);
-    const addressPrefix = (req.body.addressPrefix || '').trim();
+    const difficulty = estimateDifficulty(prefixWords, wordCount, {
+      addressPrefix: req.body.addressPrefix || '',
+      addressSuffix: req.body.addressSuffix || '',
+    });
 
     res.json({
       prefixWords,
       wordCount,
       difficulty,
-      addressPrefix,
-      addressNote: addressPrefix
-        ? `Adress-Prefix "${addressPrefix}" kann viele Versuche brauchen (58^${addressPrefix.length} im Worst Case).`
-        : null,
+      grinder: isGrinderAvailable() ? 'rust' : 'node-workers',
+      threads: defaultThreads(),
+      addressPrefix: (req.body.addressPrefix || '').trim(),
+      addressSuffix: (req.body.addressSuffix || '').trim(),
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
+async function runGeneration(jobId, options) {
+  try {
+    const result = await generateWallet({
+      ...options,
+      onProgress: ({ attempts, keysPerSec }) => {
+        const job = jobs.get(jobId);
+        if (job) {
+          job.attempts = attempts;
+          job.keysPerSec = keysPerSec;
+        }
+      },
+    });
+
+    jobs.set(jobId, {
+      status: 'done',
+      result,
+      finishedAt: Date.now(),
+    });
+  } catch (err) {
+    jobs.set(jobId, { status: 'error', error: err.message, finishedAt: Date.now() });
+  }
+}
 
 app.post('/api/generate', (req, res) => {
   try {
@@ -51,44 +85,18 @@ app.post('/api/generate', (req, res) => {
     validatePrefixWords(prefixWords, wordCount);
 
     const jobId = String(++jobCounter);
-    jobs.set(jobId, { status: 'running', attempts: 0, startedAt: Date.now() });
-
+    jobs.set(jobId, { status: 'running', attempts: 0, keysPerSec: 0, startedAt: Date.now() });
     res.json({ jobId, status: 'running' });
 
-    setImmediate(() => {
-      try {
-        const result = generateWallet({
-          prefix: req.body.prefix || '',
-          wordCount,
-          account,
-          addressPrefix: req.body.addressPrefix || '',
-          maxAttempts,
-          onProgress: ({ attempts }) => {
-            const job = jobs.get(jobId);
-            if (job) job.attempts = attempts;
-          },
-        });
-
-        jobs.set(jobId, {
-          status: 'done',
-          result: {
-            chain: 'solana',
-            mnemonic: result.mnemonic,
-            address: result.address,
-            secretKeyBase58: result.secretKeyBase58,
-            attempts: result.attempts,
-            method: result.method,
-            derivationPath: result.derivationPath,
-            account: result.account,
-            wordCount: result.wordCount,
-            prefixWords: result.prefixWords,
-          },
-          finishedAt: Date.now(),
-        });
-      } catch (err) {
-        jobs.set(jobId, { status: 'error', error: err.message, finishedAt: Date.now() });
-      }
-    });
+    setImmediate(() => runGeneration(jobId, {
+      prefix: req.body.prefix || '',
+      wordCount,
+      account,
+      addressPrefix: req.body.addressPrefix || '',
+      addressSuffix: req.body.addressSuffix || '',
+      maxAttempts,
+      timeoutMs: Math.min(parseInt(req.body.timeout, 10) || TIMEOUT_MS, 600_000),
+    }));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -99,7 +107,11 @@ app.get('/api/job/:id', (req, res) => {
   if (!job) return res.status(404).json({ error: 'Job nicht gefunden' });
 
   if (job.status === 'running') {
-    return res.json({ status: 'running', attempts: job.attempts });
+    return res.json({
+      status: 'running',
+      attempts: job.attempts,
+      keysPerSec: job.keysPerSec,
+    });
   }
   if (job.status === 'error') {
     return res.json({ status: 'error', error: job.error });
@@ -107,32 +119,23 @@ app.get('/api/job/:id', (req, res) => {
   return res.json({ status: 'done', ...job.result });
 });
 
-app.post('/api/generate-sync', (req, res) => {
+app.post('/api/generate-sync', async (req, res) => {
   try {
     const wordCount = parseInt(req.body.wordCount, 10) === 24 ? 24 : 12;
     const account = Math.max(0, parseInt(req.body.account, 10) || 0);
     const maxAttempts = Math.min(500_000, Math.max(1000, parseInt(req.body.maxAttempts, 10) || 100_000));
 
-    const result = generateWallet({
+    const result = await generateWallet({
       prefix: req.body.prefix || '',
       wordCount,
       account,
       addressPrefix: req.body.addressPrefix || '',
+      addressSuffix: req.body.addressSuffix || '',
       maxAttempts,
+      timeoutMs: Math.min(parseInt(req.body.timeout, 10) || 120_000, 300_000),
     });
 
-    res.json({
-      chain: 'solana',
-      mnemonic: result.mnemonic,
-      address: result.address,
-      secretKeyBase58: result.secretKeyBase58,
-      attempts: result.attempts,
-      method: result.method,
-      derivationPath: result.derivationPath,
-      account: result.account,
-      wordCount: result.wordCount,
-      prefixWords: result.prefixWords,
-    });
+    res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -147,4 +150,5 @@ setInterval(() => {
 
 app.listen(PORT, () => {
   console.log(`prefix-wallet-gen listening on :${PORT}`);
+  console.log(`Grinder: ${isGrinderAvailable() ? 'rust (optimized)' : `node workers ×${defaultThreads()}`}`);
 });
