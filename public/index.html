@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prefix Wallet Gen — Solana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --surface: #111827;
+      --surface2: #1a2234;
+      --border: #2a3548;
+      --text: #e8edf5;
+      --muted: #8b9cb3;
+      --accent: #14f195;
+      --accent2: #9945ff;
+      --warn: #ffb020;
+      --danger: #ff5c5c;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(153, 69, 255, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(20, 241, 149, 0.08), transparent);
+    }
+
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      display: grid;
+      place-items: center;
+      font-size: 1.25rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .warn-banner {
+      background: rgba(255, 176, 32, 0.1);
+      border: 1px solid rgba(255, 176, 32, 0.35);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #ffd98a;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    @media (min-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.35rem;
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      padding: 0.7rem 0.85rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent2);
+    }
+
+    textarea {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    .field { margin-bottom: 1rem; }
+    .field:last-child { margin-bottom: 0; }
+
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .row > * { flex: 1; min-width: 120px; }
+
+    .difficulty {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      min-height: 1.2em;
+    }
+
+    .difficulty strong { color: var(--accent); }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      padding: 0.8rem 1.4rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent2), #7c3aed);
+      color: white;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .result-card {
+      margin-top: 1.25rem;
+      display: none;
+    }
+
+    .result-card.visible { display: block; }
+
+    .result-card.error {
+      border-color: rgba(255, 92, 92, 0.5);
+      background: rgba(255, 92, 92, 0.06);
+    }
+
+    .result-card.success {
+      border-color: rgba(20, 241, 149, 0.35);
+    }
+
+    .result-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .result-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      word-break: break-all;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .result-value.secret {
+      border: 1px dashed rgba(255, 92, 92, 0.4);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.75rem;
+      padding: 0.3rem 0.55rem;
+      background: var(--border);
+      color: var(--text);
+      border-radius: 6px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .meta span strong { color: var(--text); }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-line {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-height: 1.4em;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--accent2); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">◎</div>
+        <div>
+          <h1>Prefix Wallet Gen</h1>
+          <p class="subtitle">Solana-Wallets mit BIP-39 Seed-Phrase — deine Wörter stehen am Anfang.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="warn-banner">
+      <strong>Sicherheitshinweis:</strong> Dieses Tool läuft auf einem Server. Generierte Mnemonics und Private Keys
+      könnten geloggt werden. Für echte Gelder: Tool lokal klonen und offline nutzen, oder nur für Test/Dev-Wallets verwenden.
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <h2>Prefix & Format</h2>
+        <div class="field">
+          <label for="prefix">Prefix-Wörter (BIP-39, Leerzeichen oder Komma)</label>
+          <textarea id="prefix" placeholder="z.B. abandon ability able"></textarea>
+          <div class="difficulty" id="difficulty"></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="wordCount">Wortanzahl</label>
+            <select id="wordCount">
+              <option value="12" selected>12 Wörter</option>
+              <option value="24">24 Wörter</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="scheme">Derivation</label>
+            <select id="scheme">
+              <option value="standard" selected>Standard (Phantom)</option>
+              <option value="direct">Direct (Cohort-Style)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Optionen</h2>
+        <div class="field">
+          <label for="addressPrefix">Adress-Prefix (optional, z.B. „7xK")</label>
+          <input id="addressPrefix" type="text" placeholder="Leer lassen = beliebige Adresse" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="account">Account-Index</label>
+            <input id="account" type="number" value="0" min="0" max="99" />
+          </div>
+          <div class="field">
+            <label for="maxAttempts">Max. Versuche</label>
+            <input id="maxAttempts" type="number" value="2000000" min="1000" max="50000000" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="generateBtn">Wallet generieren</button>
+      <button class="btn-secondary" id="randomBtn">Zufällige Wallet</button>
+    </div>
+
+    <div class="status-line" id="status"></div>
+
+    <div class="card result-card" id="resultCard">
+      <h2>Ergebnis</h2>
+      <div id="resultContent"></div>
+    </div>
+
+    <footer>
+      Open Source · <a href="https://github.com/AleisterMoltley/prefix-wallet-gen" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const prefixEl = $('prefix');
+    const wordCountEl = $('wordCount');
+    const difficultyEl = $('difficulty');
+    const statusEl = $('status');
+    const resultCard = $('resultCard');
+    const resultContent = $('resultContent');
+    const generateBtn = $('generateBtn');
+    const randomBtn = $('randomBtn');
+
+    let estimateTimer;
+
+    function getPayload() {
+      return {
+        prefix: prefixEl.value,
+        wordCount: parseInt(wordCountEl.value, 10),
+        scheme: $('scheme').value,
+        account: parseInt($('account').value, 10) || 0,
+        addressPrefix: $('addressPrefix').value,
+        maxAttempts: parseInt($('maxAttempts').value, 10) || 2000000,
+      };
+    }
+
+    async function updateEstimate() {
+      try {
+        const res = await fetch('/api/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getPayload()),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          difficultyEl.textContent = data.error;
+          difficultyEl.style.color = 'var(--danger)';
+          return;
+        }
+        difficultyEl.style.color = '';
+        let text = `Schwierigkeit: <strong>${data.difficulty.label}</strong>`;
+        if (data.difficulty.factor > 1) {
+          text += ` (~${data.difficulty.factor.toLocaleString()}×)`;
+        }
+        if (data.addressNote) text += ` · ${data.addressNote}`;
+        difficultyEl.innerHTML = text;
+      } catch {
+        difficultyEl.textContent = '';
+      }
+    }
+
+    function scheduleEstimate() {
+      clearTimeout(estimateTimer);
+      estimateTimer = setTimeout(updateEstimate, 300);
+    }
+
+    prefixEl.addEventListener('input', scheduleEstimate);
+    wordCountEl.addEventListener('change', scheduleEstimate);
+    $('addressPrefix').addEventListener('input', scheduleEstimate);
+    updateEstimate();
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = orig; }, 1200);
+      });
+    }
+
+    function renderResult(data, isError = false) {
+      resultCard.className = 'card result-card visible ' + (isError ? 'error' : 'success');
+
+      if (isError) {
+        resultContent.innerHTML = `<p style="color: var(--danger)">${data.error || data}</p>`;
+        return;
+      }
+
+      const showSecret = confirm('Private Key anzeigen? Nur ja klicken wenn niemand mitliest!');
+
+      resultContent.innerHTML = `
+        <div class="result-label">Mnemonic (Seed Phrase)</div>
+        <div class="result-value" id="mnemonicVal">${data.mnemonic}
+          <button class="copy-btn" onclick="copyFrom('mnemonicVal')">Copy</button>
+        </div>
+        <div class="result-label">Solana Adresse</div>
+        <div class="result-value" id="addressVal">${data.address}
+          <button class="copy-btn" onclick="copyFrom('addressVal')">Copy</button>
+        </div>
+        ${showSecret ? `
+          <div class="result-label">Private Key (Base58)</div>
+          <div class="result-value secret" id="secretVal">${data.secretKeyBase58}
+            <button class="copy-btn" onclick="copyFrom('secretVal')">Copy</button>
+          </div>
+        ` : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Private Key ausgeblendet.</p>'}
+        <div class="meta">
+          <span>Versuche: <strong>${(data.attempts || 1).toLocaleString()}</strong></span>
+          <span>Schema: <strong>${data.scheme}</strong></span>
+          <span>Account: <strong>${data.account}</strong></span>
+          <span>Methode: <strong>${data.method || '—'}</strong></span>
+        </div>
+      `;
+    }
+
+    window.copyFrom = function(id) {
+      const el = document.getElementById(id);
+      const text = el.childNodes[0].textContent.trim();
+      copyText(text, el.querySelector('.copy-btn'));
+    };
+
+    async function pollJob(jobId) {
+      while (true) {
+        const res = await fetch(`/api/job/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === 'running') {
+          statusEl.innerHTML = `<span class="spinner"></span>Suche… ${(data.attempts || 0).toLocaleString()} Versuche`;
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+
+        if (data.status === 'error') {
+          statusEl.textContent = '';
+          renderResult(data, true);
+          return;
+        }
+
+        statusEl.textContent = `Fertig in ${(data.attempts || 1).toLocaleString()} Versuchen.`;
+        renderResult(data);
+        return;
+      }
+    }
+
+    async function generate(clearPrefix = false) {
+      generateBtn.disabled = true;
+      randomBtn.disabled = true;
+      resultCard.classList.remove('visible');
+      statusEl.innerHTML = '<span class="spinner"></span>Generiere…';
+
+      const payload = getPayload();
+      if (clearPrefix) payload.prefix = '';
+
+      try {
+        const hasAddressPrefix = payload.addressPrefix.trim().length > 0;
+        const useAsync = hasAddressPrefix || payload.maxAttempts > 500000;
+
+        if (!useAsync) {
+          const res = await fetch('/api/generate-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          statusEl.textContent = `Fertig in ${data.attempts.toLocaleString()} Versuchen.`;
+          renderResult(data);
+        } else {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          await pollJob(data.jobId);
+        }
+      } catch (err) {
+        statusEl.textContent = '';
+        renderResult({ error: err.message }, true);
+      } finally {
+        generateBtn.disabled = false;
+        randomBtn.disabled = false;
+      }
+    }
+
+    generateBtn.addEventListener('click', () => generate(false));
+    randomBtn.addEventListener('click', () => generate(true));
+  </script>
+</body>
+</html>
